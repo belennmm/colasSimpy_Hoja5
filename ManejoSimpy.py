@@ -19,7 +19,7 @@ RAMcapacity = 100
 
 # simulación de los procesos
 def simulador(env, processNum):
-    
+    print(f"\n\033[36m     •••••••••••• SIMULACIÓN CON {processNum} PROCESOS ••••••••••••\033[0m\n")
 
     
     totalTiem = []
@@ -40,6 +40,35 @@ def simulador(env, processNum):
     print(f"        Tiempo promedio: {promTime:.2f} seconds")
     print(f"        Desviación Estándar: {desVest:.2f} (seconds)")
     print(f"\033[1;34m     -------------------------------------------\033[0m\n")
+    
+def proceso(env, nombre, ramCapacidad, neededRAM, instructions, timeLlegada, velocidad, totalTiem):
+    tiempo_inicial = env.now  # el tiempo inicial
+    yield env.timeout(timeLlegada)
+    
+
+    print(f"{nombre} - requiere {neededRAM} de RAM en el segundo {tiempo_inicial}")  
+    
+    yield ramCapacidad.get(neededRAM)
+
+    
+    instructions_faltantes = instructions
+    
+    while instructions_faltantes > 0:
+        with cpu.request() as req:
+            yield req
+            
+            if instructions_faltantes >= velocidad:
+                execute = velocidad
+            else:
+                execute = instructions_faltantes
+            
+            yield env.timeout(1)  # tiempo de CPU 
+            instructions_faltantes -= execute
+    
+    yield ramCapacidad.put(neededRAM)
+    
+    totalTiem.append(env.now - tiempo_inicial)  # el tiemmpo total
+
 
 
 
@@ -47,3 +76,8 @@ def simulador(env, processNum):
 env = simpy.Environment()
 memoria_ram = simpy.Container(env, capacity=RAMcapacity, init=RAMcapacity)
 cpu = simpy.Resource(env, capacity=cpuDisp)
+
+# correr la simulación con las siguientes cantidades de procesos
+for Numprocesos in [25, 50, 100, 150, 200]:
+    simulador(env, Numprocesos)
+
